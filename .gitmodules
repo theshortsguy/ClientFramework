@@ -4,6 +4,7 @@ url = https://github.com/JamesonRGrieve/next-log.git
 [submodule "src/components/auth"]
 path = src/components/auth
 url = https://github.com/JamesonRGrieve/auth.git
+branch = main
 [submodule "src/components/appwrapper"]
 path = src/components/appwrapper
 url = https://github.com/JamesonRGrieve/appwrapper.git
