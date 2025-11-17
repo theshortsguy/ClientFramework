@@ -3,35 +3,42 @@
 import { useState } from 'react';
 import { setCookie } from 'cookies-next';
 
-const defaultThemes = ['default', 'dark', 'colorblind', 'colorblind-dark'];
+const preferredOrder = ['default', 'dark', 'dark-knight', 'colorblind', 'colorblind-dark'] as const;
 
 export const useTheme = (customThemes?: string[], initialTheme?: string) => {
   const [themes, setThemes] = useState(() => {
-    return Array.from(new Set([...defaultThemes, ...(customThemes ?? [])]));
+    const incoming = Array.from(new Set<string>([...(customThemes ?? [])]));
+    const ordered = [
+      ...preferredOrder.filter((t) => true), // ensure base order
+      ...incoming.filter((t) => !preferredOrder.includes(t as any)),
+    ];
+    const seen = new Set<string>();
+    return ordered.filter((t) => t !== 'light' && !seen.has(t) && seen.add(t));
   });
 
   const [currentTheme, setCurrentTheme] = useState(() => {
     const t = initialTheme ?? 'default';
+    // Normalize: treat 'default' and 'light' as the same visual theme
     return t === 'default' || t === 'light' || !t ? 'light' : t;
   });
 
   const setTheme = (newTheme: string) => {
-    // apply theme class to <html> for maximum compatibility
-    const classList = document.documentElement.classList;
+    const html = document.documentElement;
+    const classList = html.classList;
 
-    // normalize: "default"/"light" => no class
+    // normalize: treat default/light as 'light'
     const isLight = newTheme === 'default' || newTheme === 'light' || !newTheme;
     const normalized = isLight ? 'light' : newTheme;
 
-    // remove any previously applied theme classes
-    classList.remove('default', 'light', 'dark', 'colorblind', 'colorblind-dark');
+    // remove all known theme classes
+    const ALL = ['default', 'light', 'dark', 'colorblind', 'colorblind-dark', 'dark-knight'];
+    ALL.forEach((c) => classList.remove(c));
 
-    // only add a class for non-light themes
     if (!isLight) {
       classList.add(normalized);
     }
 
-    // persist normalized theme for SSR
+    // persist for SSR/reloads
     setCookie('theme', normalized, {
       expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
@@ -40,10 +47,5 @@ export const useTheme = (customThemes?: string[], initialTheme?: string) => {
     setCurrentTheme(normalized);
   };
 
-  return {
-    themes,
-    currentTheme,
-    setThemes,
-    setTheme,
-  };
+  return { themes, currentTheme, setThemes, setTheme };
 };
